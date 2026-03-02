@@ -34,7 +34,7 @@ router.get("/search/:keyword", async (req, res) => {
 
   const items = await Item.find({
     name: { $regex: keyword, $options: "i" }
-  });
+  }).limit(10);
 
   res.json(items);
 });

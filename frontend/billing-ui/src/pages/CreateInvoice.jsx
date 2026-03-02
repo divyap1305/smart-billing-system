@@ -1,169 +1,487 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
+import ItemSearchDropdown from "../components/ItemSearchDropdown";
+import "./CreateInvoice.css";
 
 function CreateInvoice() {
+  // Customer Details
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
   
+  // Invoice Items
   const [items, setItems] = useState([
-    { name: "", qty: 1, rate: 0, amount: 0 }
+    { id: Date.now(), name: "", qty: 1, rate: 0, amount: 0 }
   ]);
 
+  // Invoice Metadata
   const [invoiceNo, setInvoiceNo] = useState(1);
+  const [discount, setDiscount] = useState({ type: "percent", value: 0 });
+  const [gst, setGst] = useState(0);
+  const [notes, setNotes] = useState("");
+  
+  // UI States
+  const [isSaving, setIsSaving] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+
+  // Refs for focus management
+  const itemInputRefs = useRef([]);
 
   // Fetch last invoice number
   useEffect(() => {
     axios.get("http://localhost:5000/api/invoices")
       .then(res => {
         if (res.data.length > 0) {
-          const latest = res.data[0].invoiceNo;
+          const latest = Math.max(...res.data.map(inv => inv.invoiceNo));
           setInvoiceNo(latest + 1);
-        } else {
-          setInvoiceNo(1);
         }
-      });
+      })
+      .catch(err => console.log("Error fetching invoices:", err));
   }, []);
 
+  // Calculations
+  const subtotal = items.reduce((sum, item) => sum + (item.amount || 0), 0);
+  
+  const discountAmount = discount.type === "percent" 
+    ? (subtotal * discount.value) / 100 
+    : discount.value;
+  
+  const gstAmount = (subtotal - discountAmount) * gst / 100;
+  const grandTotal = subtotal - discountAmount + gstAmount;
+
+  // Add new item row
   const addItem = () => {
-    setItems([...items, { name: "", qty: 1, rate: 0, amount: 0 }]);
+    const newItem = { 
+      id: Date.now(), 
+      name: "", 
+      qty: 1, 
+      rate: 0, 
+      amount: 0 
+    };
+    setItems([...items, newItem]);
+    
+    // Focus new item after render
+    setTimeout(() => {
+      const lastIndex = items.length;
+      if (itemInputRefs.current[lastIndex]) {
+        itemInputRefs.current[lastIndex].focus();
+      }
+    }, 100);
   };
 
+  // Update item
   const updateItem = (index, field, value) => {
     const updated = [...items];
     updated[index][field] = value;
-
-    // auto calculate amount
-    updated[index].amount = updated[index].qty * updated[index].rate;
-
+    
+    // Auto calculate amount
+    if (field === "qty" || field === "rate") {
+      updated[index].amount = updated[index].qty * updated[index].rate;
+    }
+    
     setItems(updated);
+    clearError(`item-${index}-${field}`);
   };
 
+  // Handle item selection from dropdown
+  const handleItemSelect = (index, selectedItem) => {
+    const updated = [...items];
+    updated[index].name = selectedItem.name;
+    updated[index].rate = selectedItem.rate;
+    updated[index].amount = updated[index].qty * selectedItem.rate;
+    setItems(updated);
+    
+    // Focus quantity field
+    setTimeout(() => {
+      const qtyInput = document.getElementById(`qty-${index}`);
+      if (qtyInput) qtyInput.focus();
+    }, 100);
+  };
+
+  // Delete item
   const deleteItem = (index) => {
+    if (items.length === 1) {
+      setErrors({ ...errors, general: "At least one item is required" });
+      return;
+    }
     const updated = items.filter((_, i) => i !== index);
     setItems(updated);
   };
 
-  const getTotal = () => items.reduce((sum, item) => sum + item.amount, 0);
+  // Handle keyboard navigation
+  const handleKeyDown = (e, index, field) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      
+      if (field === "rate") {
+        // Add new row after rate
+        addItem();
+      } else if (field === "qty") {
+        // Move to rate field
+        const rateInput = document.getElementById(`rate-${index}`);
+        if (rateInput) rateInput.focus();
+      }
+    }
+  };
 
+  // Validation
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!customerName.trim()) {
+      newErrors.customerName = "Customer name is required";
+    }
+
+    if (items.length === 0) {
+      newErrors.items = "At least one item is required";
+    }
+
+    items.forEach((item, index) => {
+      if (!item.name.trim()) {
+        newErrors[`item-${index}-name`] = "Item name required";
+      }
+      if (item.qty <= 0) {
+        newErrors[`item-${index}-qty`] = "Qty must be > 0";
+      }
+      if (item.rate < 0) {
+        newErrors[`item-${index}-rate`] = "Rate cannot be negative";
+      }
+    });
+
+    if (grandTotal <= 0) {
+      newErrors.total = "Total amount must be greater than 0";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const clearError = (field) => {
+    if (errors[field]) {
+      const newErrors = { ...errors };
+      delete newErrors[field];
+      setErrors(newErrors);
+    }
+  };
+
+  // Save invoice
   const saveInvoice = async () => {
+    if (!validateForm()) {
+      alert("Please fix the errors before saving");
+      return;
+    }
+
+    setIsSaving(true);
+
     try {
       const payload = {
         invoiceNo,
-        customerName,
-        customerPhone,
-        customerAddress,
-        items,
-        totalAmount: getTotal(),
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        customerAddress: customerAddress.trim(),
+        items: items.map(({ id, ...item }) => item), // Remove id
+        totalAmount: grandTotal,
+        discount: discountAmount,
+        gst,
+        notes: notes.trim()
       };
 
       const res = await axios.post("http://localhost:5000/api/invoices", payload);
 
-      alert("Invoice Saved Successfully!");
-
-      // Use backend invoiceNo to avoid mismatch
+      alert("✅ Invoice Saved Successfully!");
+      
+      // Redirect to print page
       window.location.href = `/print-invoice/${res.data.invoice.invoiceNo}`;
 
     } catch (err) {
-      alert("Error saving invoice");
+      console.error("Save error:", err);
+      alert("❌ Error saving invoice: " + (err.response?.data?.message || "Server error"));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Reset form
+  const resetForm = () => {
+    if (window.confirm("Clear all invoice data?")) {
+      setCustomerName("");
+      setCustomerPhone("");
+      setCustomerAddress("");
+      setItems([{ id: Date.now(), name: "", qty: 1, rate: 0, amount: 0 }]);
+      setDiscount({ type: "percent", value: 0 });
+      setGst(0);
+      setNotes("");
+      setErrors({});
     }
   };
 
   return (
-    <div style={{ width: "800px", margin: "auto", padding: "20px" }}>
-      
-      <h2>CREATE INVOICE</h2>
+    <div className="invoice-container">
+      {/* Header */}
+      <header className="invoice-header">
+        <div className="header-left">
+          <div className="header-icon">📄</div>
+          <div className="header-title">
+            <h1>Create New Invoice</h1>
+            <div className="subtitle">Enter billing details below</div>
+          </div>
+        </div>
+        
+        <div className="header-info">
+          <div className="info-box">
+            <div className="info-label">Invoice No.</div>
+            <div className="info-value">#{invoiceNo}</div>
+          </div>
+          <div className="info-box">
+            <div className="info-label">Date</div>
+            <div className="info-value small">
+              {new Date().toLocaleDateString('en-IN', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+              })}
+            </div>
+          </div>
+        </div>
+      </header>
 
-      <div style={{ marginBottom: "20px" }}>
-        <p><b>Invoice No:</b> {invoiceNo}</p>
-        <p><b>Date:</b> {new Date().toLocaleDateString()}</p>
-      </div>
-
-      <div style={{ marginBottom: "20px" }}>
-        <h3>Customer Details</h3>
-        <input 
-          type="text" 
-          placeholder="Customer Name" 
-          value={customerName}
-          onChange={(e) => setCustomerName(e.target.value)}
-          style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
-        />
-
-        <input 
-          type="text" 
-          placeholder="Customer Phone"
-          value={customerPhone}
-          onChange={(e) => setCustomerPhone(e.target.value)}
-          style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
-        />
-
-        <input 
-          type="text" 
-          placeholder="Customer Address"
-          value={customerAddress}
-          onChange={(e) => setCustomerAddress(e.target.value)}
-          style={{ width: "100%", padding: "8px" }}
-        />
-      </div>
-
-      <h3>Items</h3>
-
-      {items.map((item, index) => (
-        <div key={index} style={{ display: "flex", marginBottom: "10px", gap: "10px" }}>
-          <input
-            type="text"
-            placeholder="Description"
-            value={item.name}
-            onChange={(e) => updateItem(index, "name", e.target.value)}
-            style={{ flex: 3, padding: "8px" }}
-          />
-
-          <input
-            type="number"
-            value={item.qty}
-            onChange={(e) => updateItem(index, "qty", Number(e.target.value))}
-            style={{ flex: 1, padding: "8px" }}
-          />
-
-          <input
-            type="number"
-            value={item.rate}
-            onChange={(e) => updateItem(index, "rate", Number(e.target.value))}
-            style={{ flex: 1, padding: "8px" }}
-          />
-
-          <div style={{ flex: 1, padding: "8px", fontWeight: "bold" }}>
-            {item.amount}
+      {/* Customer Details */}
+      <div className="section-card">
+        <div className="section-title">
+          <span>👤</span> Customer Details
+        </div>
+        
+        <div className="customer-grid">
+          <div className="form-group">
+            <label className="required">Customer Name</label>
+            <input
+              type="text"
+              placeholder="Enter customer name"
+              value={customerName}
+              onChange={(e) => {
+                setCustomerName(e.target.value);
+                clearError("customerName");
+              }}
+              className={errors.customerName ? "error" : ""}
+              onBlur={() => setTouched({ ...touched, customerName: true })}
+            />
+            {errors.customerName && touched.customerName && (
+              <div className="error-message">{errors.customerName}</div>
+            )}
           </div>
 
-          <button 
-            onClick={() => deleteItem(index)}
-            style={{ background: "red", color: "white", padding: "5px 10px" }}
-          >
-            X
-          </button>
+          <div className="form-group">
+            <label>Phone Number</label>
+            <input
+              type="tel"
+              placeholder="Enter phone number"
+              value={customerPhone}
+              onChange={(e) => setCustomerPhone(e.target.value)}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Address</label>
+            <input
+              type="text"
+              placeholder="Enter address"
+              value={customerAddress}
+              onChange={(e) => setCustomerAddress(e.target.value)}
+            />
+          </div>
         </div>
-      ))}
+      </div>
 
-      <button onClick={addItem} style={{ padding: "10px", marginTop: "10px" }}>
-        + Add Item
-      </button>
+      {/* Items Table */}
+      <div className="section-card">
+        <div className="section-title">
+          <span>🛒</span> Invoice Items
+        </div>
 
-      <h2 style={{ marginTop: "20px" }}>Total: ₹ {getTotal()}</h2>
+        <div className="table-container">
+          <table className="invoice-table">
+            <thead>
+              <tr>
+                <th>S.No</th>
+                <th>Item Description</th>
+                <th style={{ width: "100px" }}>Quantity</th>
+                <th style={{ width: "120px" }}>Rate (₹)</th>
+                <th style={{ width: "120px" }}>Amount (₹)</th>
+                <th style={{ width: "50px" }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item, index) => (
+                <tr key={item.id}>
+                  <td className="sno-cell">{index + 1}</td>
+                  
+                  <td>
+                    <ItemSearchDropdown
+                      value={item.name}
+                      onChange={(value) => updateItem(index, "name", value)}
+                      onSelect={(selected) => handleItemSelect(index, selected)}
+                      onEnter={() => {
+                        const qtyInput = document.getElementById(`qty-${index}`);
+                        if (qtyInput) qtyInput.focus();
+                      }}
+                      index={index}
+                    />
+                    {errors[`item-${index}-name`] && (
+                      <div className="error-message">{errors[`item-${index}-name`]}</div>
+                    )}
+                  </td>
+                  
+                  <td>
+                    <input
+                      id={`qty-${index}`}
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={item.qty}
+                      onChange={(e) => updateItem(index, "qty", Number(e.target.value))}
+                      onKeyDown={(e) => handleKeyDown(e, index, "qty")}
+                      className={errors[`item-${index}-qty`] ? "error" : ""}
+                    />
+                  </td>
+                  
+                  <td>
+                    <input
+                      id={`rate-${index}`}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={item.rate}
+                      onChange={(e) => updateItem(index, "rate", Number(e.target.value))}
+                      onKeyDown={(e) => handleKeyDown(e, index, "rate")}
+                      className={errors[`item-${index}-rate`] ? "error" : ""}
+                    />
+                  </td>
+                  
+                  <td className="amount-cell">
+                    ₹ {item.amount.toFixed(2)}
+                  </td>
+                  
+                  <td>
+                    <button
+                      className="delete-btn"
+                      onClick={() => deleteItem(index)}
+                      title="Delete item"
+                    >
+                      ✕
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-      <button 
-        onClick={saveInvoice}
-        style={{
-          padding: "10px 20px",
-          background: "green",
-          color: "white",
-          fontWeight: "bold",
-          marginTop: "20px"
-        }}
-      >
-        SAVE INVOICE
-      </button>
+        <button className="btn-add-row" onClick={addItem}>
+          <span>➕</span> Add New Row
+        </button>
+      </div>
 
+      {/* Summary Section */}
+      <div className="summary-section">
+        <div className="notes-section">
+          <div className="section-title">
+            <span>📝</span> Additional Notes
+          </div>
+          <textarea
+            placeholder="Enter any notes or comments for this invoice..."
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </div>
+
+        <div className="totals-box">
+          <div className="section-title" style={{ marginBottom: "15px" }}>
+            <span>💰</span> Invoice Summary
+          </div>
+
+          <div className="total-row">
+            <span className="total-label">Subtotal:</span>
+            <span className="total-value">₹ {subtotal.toFixed(2)}</span>
+          </div>
+
+          {/* Discount */}
+          <div className="calculation-row">
+            <div className="calculation-input">
+              <label>Discount:</label>
+              <select
+                value={discount.type}
+                onChange={(e) => setDiscount({ ...discount, type: e.target.value })}
+                style={{ width: "70px", padding: "6px", borderRadius: "6px" }}
+              >
+                <option value="percent">%</option>
+                <option value="fixed">₹</option>
+              </select>
+              <input
+                type="number"
+                min="0"
+                value={discount.value}
+                onChange={(e) => setDiscount({ ...discount, value: Number(e.target.value) })}
+                style={{ width: "80px" }}
+              />
+            </div>
+          </div>
+
+          {discountAmount > 0 && (
+            <div className="total-row">
+              <span className="total-label">Discount:</span>
+              <span className="total-value">- ₹ {discountAmount.toFixed(2)}</span>
+            </div>
+          )}
+
+          {/* GST */}
+          <div className="calculation-row">
+            <div className="calculation-input">
+              <label>GST (%):</label>
+              <input
+                type="number"
+                min="0"
+                max="28"
+                step="0.1"
+                value={gst}
+                onChange={(e) => setGst(Number(e.target.value))}
+                style={{ width: "80px" }}
+              />
+            </div>
+          </div>
+
+          {gstAmount > 0 && (
+            <div className="total-row">
+              <span className="total-label">GST:</span>
+              <span className="total-value">+ ₹ {gstAmount.toFixed(2)}</span>
+            </div>
+          )}
+
+          <div className="total-row grand-total">
+            <span className="total-label">Grand Total:</span>
+            <span className="total-value">₹ {grandTotal.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="action-buttons">
+        <button className="btn-secondary" onClick={resetForm}>
+          <span>🔄</span> Reset
+        </button>
+        
+        <button 
+          className="btn-primary" 
+          onClick={saveInvoice}
+          disabled={isSaving}
+        >
+          {isSaving ? (
+            <>⏳ Saving...</>
+          ) : (
+            <>💾 Save Invoice</>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

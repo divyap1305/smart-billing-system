@@ -11,8 +11,15 @@ router.post("/", async (req, res) => {
       customerPhone,
       customerAddress,
       items,
+      discount,
+      gst,
+      notes,
       totalAmount
     } = req.body;
+
+    const subtotal = items.reduce((sum, item) => sum + (item.qty * item.rate), 0);
+    const discountAmount = discount || 0;
+    const gstAmount = gst ? ((subtotal - discountAmount) * gst / 100) : 0;
 
     const newInvoice = new Invoice({
       invoiceNo,
@@ -20,13 +27,19 @@ router.post("/", async (req, res) => {
       customerPhone,
       customerAddress,
       items,
-      totalAmount
+      subtotal,
+      discount: discountAmount,
+      gst: gst || 0,
+      gstAmount,
+      notes:notes || "",
+      totalAmount: totalAmount || (subtotal - discountAmount + gstAmount)
     });
 
     await newInvoice.save();
     res.json({ message: "Invoice saved successfully", invoice: newInvoice });
 
   } catch (error) {
+    console.error("Invoice creation error:", error);
     res.status(500).json({ error: error.message });
   }
 });
