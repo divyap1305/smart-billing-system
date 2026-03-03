@@ -23,6 +23,9 @@ app.use("/api/items", itemRoutes);
 const invoiceRoutes = require("./routes/invoiceRoutes");
 app.use("/api/invoices", invoiceRoutes);
 
+const customerRoutes = require("./routes/customerRoutes");
+app.use("/api/customers", customerRoutes);
+
 app.get("/", (req, res) => {
   res.send("Smart Billing API running");
 });
