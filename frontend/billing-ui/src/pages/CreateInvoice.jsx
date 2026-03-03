@@ -20,6 +20,12 @@ function CreateInvoice() {
   const [gst, setGst] = useState(0);
   const [notes, setNotes] = useState("");
   
+  // ✅ Customer and Payment States
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [paymentMode, setPaymentMode] = useState("Cash");
+  const [paidAmount, setPaidAmount] = useState("");
+  const [showPayment, setShowPayment] = useState(true);
+
   // UI States
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState({});
@@ -39,6 +45,24 @@ function CreateInvoice() {
       })
       .catch(err => console.log("Error fetching invoices:", err));
   }, []);
+
+  // ✅ Search customer by phone number
+  const searchCustomerByPhone = async (phone) => {
+    if (phone.length !== 10) return;
+    
+    try {
+      const res = await axios.get(`http://localhost:5000/api/customers/search/${phone}`);
+      if (res.data) {
+        setSelectedCustomer(res.data);
+        setCustomerName(res.data.name);
+        setCustomerAddress(res.data.address || "");
+      }
+    } catch (err) {
+      if (err.response?.status === 404) {
+        setSelectedCustomer(null);
+      }
+    }
+  };
 
   // Calculations
   const subtotal = items.reduce((sum, item) => sum + (item.amount || 0), 0);
@@ -61,7 +85,6 @@ function CreateInvoice() {
     };
     setItems([...items, newItem]);
     
-    // Focus new item after render
     setTimeout(() => {
       const lastIndex = items.length;
       if (itemInputRefs.current[lastIndex]) {
@@ -75,7 +98,6 @@ function CreateInvoice() {
     const updated = [...items];
     updated[index][field] = value;
     
-    // Auto calculate amount
     if (field === "qty" || field === "rate") {
       updated[index].amount = updated[index].qty * updated[index].rate;
     }
@@ -92,7 +114,6 @@ function CreateInvoice() {
     updated[index].amount = updated[index].qty * selectedItem.rate;
     setItems(updated);
     
-    // Focus quantity field
     setTimeout(() => {
       const qtyInput = document.getElementById(`qty-${index}`);
       if (qtyInput) qtyInput.focus();
@@ -115,10 +136,8 @@ function CreateInvoice() {
       e.preventDefault();
       
       if (field === "rate") {
-        // Add new row after rate
         addItem();
       } else if (field === "qty") {
-        // Move to rate field
         const rateInput = document.getElementById(`rate-${index}`);
         if (rateInput) rateInput.focus();
       }
@@ -165,7 +184,7 @@ function CreateInvoice() {
     }
   };
 
-  // Save invoice
+  // ✅ Save invoice with payment data
   const saveInvoice = async () => {
     if (!validateForm()) {
       alert("Please fix the errors before saving");
@@ -177,21 +196,23 @@ function CreateInvoice() {
     try {
       const payload = {
         invoiceNo,
+        customerId: selectedCustomer?._id,
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
         customerAddress: customerAddress.trim(),
-        items: items.map(({ id, ...item }) => item), // Remove id
-        totalAmount: grandTotal,
+        items: items.map(({ id, ...item }) => item),
         discount: discountAmount,
         gst,
-        notes: notes.trim()
+        notes: notes.trim(),
+        totalAmount: grandTotal,
+        paymentMode,
+        paidAmount: paidAmount ? Number(paidAmount) : grandTotal
       };
 
       const res = await axios.post("http://localhost:5000/api/invoices", payload);
 
       alert("✅ Invoice Saved Successfully!");
       
-      // Redirect to print page
       window.location.href = `/print-invoice/${res.data.invoice.invoiceNo}`;
 
     } catch (err) {
@@ -208,10 +229,13 @@ function CreateInvoice() {
       setCustomerName("");
       setCustomerPhone("");
       setCustomerAddress("");
+      setSelectedCustomer(null);
       setItems([{ id: Date.now(), name: "", qty: 1, rate: 0, amount: 0 }]);
       setDiscount({ type: "percent", value: 0 });
       setGst(0);
       setNotes("");
+      setPaymentMode("Cash");
+      setPaidAmount("");
       setErrors({});
     }
   };
@@ -277,8 +301,17 @@ function CreateInvoice() {
               type="tel"
               placeholder="Enter phone number"
               value={customerPhone}
-              onChange={(e) => setCustomerPhone(e.target.value)}
+              onChange={(e) => {
+                setCustomerPhone(e.target.value);
+                searchCustomerByPhone(e.target.value);
+              }}
+              onBlur={() => searchCustomerByPhone(customerPhone)}
             />
+            {selectedCustomer && (
+              <small className="customer-found">
+                ✓ Existing customer: {selectedCustomer.name}
+              </small>
+            )}
           </div>
 
           <div className="form-group">
@@ -461,6 +494,51 @@ function CreateInvoice() {
             <span className="total-label">Grand Total:</span>
             <span className="total-value">₹ {grandTotal.toFixed(2)}</span>
           </div>
+        </div>
+      </div>
+
+      {/* Payment Section */}
+      <div className="payment-section">
+        <h4>Payment Details</h4>
+        
+        <div className="payment-mode">
+          <label>Payment Mode:</label>
+          <select 
+            value={paymentMode}
+            onChange={(e) => setPaymentMode(e.target.value)}
+          >
+            <option value="Cash">Cash</option>
+            <option value="Card">Card</option>
+            <option value="UPI">UPI</option>
+            <option value="Credit">Credit</option>
+          </select>
+        </div>
+
+        {paymentMode === 'Credit' && selectedCustomer && (
+          <div className="credit-info">
+            <p><strong>Customer Credit Limit:</strong> ₹{selectedCustomer.creditLimit || 0}</p>
+            <p><strong>Outstanding:</strong> ₹{selectedCustomer.outstandingBalance || 0}</p>
+            <p><strong>Available Credit:</strong> ₹{(selectedCustomer.creditLimit || 0) - (selectedCustomer.outstandingBalance || 0)}</p>
+          </div>
+        )}
+
+        {paymentMode === 'Credit' && !selectedCustomer && (
+          <div className="credit-info warning">
+            <p>⚠️ Please search and select a customer first</p>
+          </div>
+        )}
+
+        <div className="paid-amount">
+          <label>Amount Paid:</label>
+          <input
+            type="number"
+            value={paidAmount}
+            onChange={(e) => setPaidAmount(e.target.value)}
+            placeholder="Enter paid amount"
+            min="0"
+            max={grandTotal}
+          />
+          <small>Leave empty for full payment (₹{grandTotal.toFixed(2)})</small>
         </div>
       </div>
 

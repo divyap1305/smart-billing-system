@@ -141,11 +141,13 @@ function Dashboard() {
         </div>
 
         {/* Customer Management (Optional) */}
-        <div className="feature-card" onClick={() => alert("Customer Management - Coming Soon!")}>
-          <div className="feature-icon orange">👥</div>
+        <div className="feature-card" onClick={() => navigate("/customers")}>
+          <div className="feature-icon" style={{ background: "linear-gradient(135deg, #7c3aed, #5b21b6)" }}>
+            👥
+          </div>
           <div className="feature-content">
             <h3>Customer Management</h3>
-            <p>Manage customer details, view purchase history, and maintain records.</p>
+            <p>Add, edit, and manage all your customers in one place.</p>
           </div>
           <div className="feature-arrow">→</div>
         </div>

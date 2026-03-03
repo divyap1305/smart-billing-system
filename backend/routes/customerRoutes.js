@@ -197,4 +197,47 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+// ========== GET CUSTOMERS WITH OUTSTANDING ==========
+// GET /api/customers/outstanding/all
+router.get("/outstanding/all", async (req, res) => {
+  try {
+    const customers = await Customer.find({
+      outstandingBalance: { $gt: 0 }
+    }).sort({ outstandingBalance: -1 });
+    
+    res.json(customers);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching outstanding customers" });
+  }
+});
+
+// ========== GET CUSTOMER OUTSTANDING DETAILS ==========
+// GET /api/customers/:id/outstanding
+router.get("/:id/outstanding", async (req, res) => {
+  try {
+    const customer = await Customer.findById(req.params.id);
+    
+    // Get all pending invoices for this customer
+    const Invoice = require("../models/Invoice");
+    const pendingInvoices = await Invoice.find({
+      customerId: req.params.id,
+      paymentStatus: { $in: ['Pending', 'Partial'] }
+    }).sort({ date: -1 });
+
+    res.json({
+      customer: {
+        name: customer.name,
+        phone: customer.phone,
+        creditLimit: customer.creditLimit,
+        outstandingBalance: customer.outstandingBalance,
+        creditUsed: customer.creditUsed,
+        creditAvailable: (customer.creditLimit || 0) - (customer.outstandingBalance || 0)
+      },
+      pendingInvoices
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching outstanding details" });
+  }
+});
+
 module.exports = router;

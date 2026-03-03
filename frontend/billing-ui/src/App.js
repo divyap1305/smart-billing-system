@@ -6,6 +6,7 @@ import Items from "./pages/Items";
 import PrintInvoice from "./pages/PrintInvoice";
 import InvoiceHistory from "./pages/InvoiceHistory";
 import ForgotPassword from './pages/ForgotPassword';
+import Customers from './pages/Customers';
 
 function App() {
   const isLoggedIn = localStorage.getItem("token") !== null;
@@ -42,6 +43,10 @@ function App() {
       <Route
         path="/forgot-password"
         element={<ForgotPassword />}
+       />
+      <Route
+        path="/customers"
+        element={isLoggedIn ? <Customers /> : <Navigate to="/" />}
        />
 
     </Routes>

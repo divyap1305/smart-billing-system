@@ -72,7 +72,17 @@ const customerSchema = new mongoose.Schema({
     type: Number, 
     default: 0 
   },
-  
+    
+  outstandingBalance: {
+    type: Number,
+    default: 0
+  },  // Current pending amount
+    
+  creditUsed: {
+    type: Number,
+    default: 0
+  },           // How much of limit used
+
   // Customer since
   createdAt: { 
     type: Date, 
