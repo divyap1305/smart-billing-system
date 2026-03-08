@@ -544,6 +544,15 @@ function CreateInvoice() {
 
       {/* Action Buttons */}
       <div className="action-buttons">
+        {/* ✅ BACK BUTTON - Add this before Reset */}
+        <button 
+          className="btn-back" 
+          onClick={() => window.history.back()}
+          title="Go back"
+        >
+          <span>←</span> Back
+        </button>
+        
         <button className="btn-secondary" onClick={resetForm}>
           <span>🔄</span> Reset
         </button>
