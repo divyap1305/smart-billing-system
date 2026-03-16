@@ -7,6 +7,8 @@ import PrintInvoice from "./pages/PrintInvoice";
 import InvoiceHistory from "./pages/InvoiceHistory";
 import ForgotPassword from './pages/ForgotPassword';
 import Customers from './pages/Customers';
+import Settings from './pages/Settings';
+import Reports from './pages/Reports';
 
 function App() {
   const isLoggedIn = localStorage.getItem("token") !== null;
@@ -47,6 +49,14 @@ function App() {
       <Route
         path="/customers"
         element={isLoggedIn ? <Customers /> : <Navigate to="/" />}
+       />
+      <Route
+        path="/settings"
+        element={isLoggedIn ? <Settings /> : <Navigate to="/" />}
+       />
+      <Route
+        path="/reports"
+        element={isLoggedIn ? <Reports /> : <Navigate to="/" />}
        />
 
     </Routes>

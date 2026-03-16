@@ -153,7 +153,7 @@ function Dashboard() {
         </div>
 
         {/* Settings (Optional) */}
-        <div className="feature-card" onClick={() => alert("Settings - Coming Soon!")}>
+        <div className="feature-card" onClick={() => navigate("/settings")}>
           <div className="feature-icon teal">⚙️</div>
           <div className="feature-content">
             <h3>Settings</h3>
@@ -163,7 +163,7 @@ function Dashboard() {
         </div>
 
         {/* Reports (Optional) */}
-        <div className="feature-card" onClick={() => alert("Reports - Coming Soon!")}>
+        <div className="feature-card" onClick={() => navigate("/reports")}>
           <div className="feature-icon" style={{ background: "linear-gradient(135deg, #6b7280, #4b5563)" }}>
             📈
           </div>

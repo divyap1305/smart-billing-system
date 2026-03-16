@@ -1,40 +1,42 @@
 const express = require("express");
-const mongoose = require("mongoose");
 const cors = require("cors");
+
+const connectDB = require("./config/db");
+
+const authRoutes = require("./routes/authRoutes");
+const itemRoutes = require("./routes/itemRoutes");
+const invoiceRoutes = require("./routes/invoiceRoutes");
+const customerRoutes = require("./routes/customerRoutes");
 
 const app = express();
 
-// ✅ MIDDLEWARES FIRST
+
+// MIDDLEWARES
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// DB CONNECTION
-const connectDB = require("./config/db");
+
+// DATABASE CONNECTION
 connectDB();
 
-// ROUTES AFTER MIDDLEWARE
-const authRoutes = require("./routes/authRoutes");
+
+// ROUTES
 app.use("/api/auth", authRoutes);
-
-const itemRoutes = require("./routes/itemRoutes");
 app.use("/api/items", itemRoutes);
-
-const invoiceRoutes = require("./routes/invoiceRoutes");
 app.use("/api/invoices", invoiceRoutes);
-
-const customerRoutes = require("./routes/customerRoutes");
 app.use("/api/customers", customerRoutes);
 
+
+// TEST ROUTE
 app.get("/", (req, res) => {
-  res.send("Smart Billing API running");
+  res.send("Smart Billing API running...");
 });
 
-mongoose
-  .connect("mongodb://127.0.0.1:27017/smartbilling")
-  .then(() => {
-    app.listen(5000, () => {
-      console.log("Server running on port 5000");
-    });
-  })
-  .catch((err) => console.log(err));
+
+// SERVER START
+const PORT = 5000;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});

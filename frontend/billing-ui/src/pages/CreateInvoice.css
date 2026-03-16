@@ -163,6 +163,7 @@
 .error-message {
   color: #dc2626;
   font-size: 0.8rem;
+  margin-top: 4px;
 }
 
 /* Table Styles */
@@ -199,6 +200,10 @@
   border-bottom: none;
 }
 
+.invoice-table tr:hover {
+  background: #f8fafc;
+}
+
 .invoice-table input {
   width: 100%;
   padding: 10px;
@@ -218,16 +223,24 @@
   border-color: #dc2626;
 }
 
+.invoice-table input:disabled {
+  background: #f1f5f9;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 .invoice-table .sno-cell {
   font-weight: 600;
   color: #64748b;
   width: 50px;
+  text-align: center;
 }
 
 .invoice-table .amount-cell {
   font-weight: 600;
   color: #1e293b;
   width: 100px;
+  text-align: right;
 }
 
 .delete-btn {
@@ -246,48 +259,93 @@
   color: #dc2626;
 }
 
-/* Search Dropdown */
-.search-container {
+/* ========== DROPDOWN STYLES - FIXED ========== */
+.dropdown-container {
   position: relative;
   width: 100%;
 }
 
-.search-results {
+.dropdown-input {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.dropdown-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.dropdown-menu {
   position: absolute;
   top: 100%;
   left: 0;
   right: 0;
   background: white;
-  border: 1px solid #eef2f6;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  max-height: 200px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  max-height: 250px;
   overflow-y: auto;
   z-index: 1000;
-  margin-top: 5px;
+  margin-top: 4px;
+  list-style: none;
+  padding: 4px 0;
 }
 
-.search-result-item {
-  padding: 12px 15px;
+.dropdown-item {
+  padding: 10px 15px;
   cursor: pointer;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #eef2f6;
+  border-bottom: 1px solid #f1f5f9;
+  transition: all 0.2s;
 }
 
-.search-result-item:hover {
-  background: #f8fafc;
+.dropdown-item:last-child {
+  border-bottom: none;
 }
 
-.search-result-item .item-name {
+.dropdown-item:hover {
+  background: #f0f9ff;
+}
+
+.dropdown-item.active {
+  background: #e6f0ff;
+  border-left: 3px solid #2563eb;
+}
+
+.dropdown-item-name {
   font-weight: 500;
   color: #1e293b;
 }
 
-.search-result-item .item-rate {
+.dropdown-item-rate {
   color: #2563eb;
   font-weight: 600;
+  background: #eef2ff;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+}
+
+/* No results message */
+.dropdown-empty {
+  padding: 15px;
+  text-align: center;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* Current row highlight */
+.current-row {
+  background: #f0f9ff !important;
+  border-left: 3px solid #2563eb;
 }
 
 /* Summary Section */
@@ -306,11 +364,13 @@
   font-size: 0.95rem;
   resize: vertical;
   min-height: 100px;
+  font-family: inherit;
 }
 
 .notes-section textarea:focus {
   outline: none;
   border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .totals-box {
@@ -349,7 +409,7 @@
   color: #1e293b;
 }
 
-/* Discount and GST Row */
+/* GST Row */
 .calculation-row {
   display: flex;
   gap: 15px;
@@ -380,6 +440,7 @@
 .calculation-input input:focus {
   outline: none;
   border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 /* Action Buttons */
@@ -499,33 +560,86 @@
   padding: 20px;
   border-radius: 12px;
   margin-top: 20px;
+  border: 1px solid #eef2f6;
 }
 
 .payment-section h4 {
   color: #1e293b;
   margin-bottom: 15px;
+  font-size: 1.1rem;
 }
 
 .payment-mode {
   margin-bottom: 15px;
 }
 
+.payment-mode label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #475569;
+  margin-bottom: 5px;
+}
+
 .payment-mode select {
   width: 100%;
-  padding: 10px;
+  padding: 12px;
   border: 2px solid #e2e8f0;
   border-radius: 8px;
   font-size: 0.95rem;
-  margin-top: 5px;
+  background: white;
+  cursor: pointer;
+}
+
+.payment-mode select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.credit-info {
+  background: #e6f0ff;
+  border-left: 4px solid #2563eb;
+  padding: 12px 15px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+
+.credit-info p {
+  margin: 5px 0;
+  color: #1e293b;
+  font-size: 0.9rem;
+}
+
+.credit-info.warning {
+  background: #fff3cd;
+  border-left-color: #ffc107;
+}
+
+.paid-amount {
+  margin-top: 15px;
+}
+
+.paid-amount label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #475569;
+  margin-bottom: 5px;
 }
 
 .paid-amount input {
   width: 100%;
-  padding: 10px;
+  padding: 12px;
   border: 2px solid #e2e8f0;
   border-radius: 8px;
   font-size: 0.95rem;
-  margin-top: 5px;
+}
+
+.paid-amount input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .paid-amount small {
@@ -543,6 +657,7 @@
   padding: 12px 24px;
   border-radius: 10px;
   font-weight: 600;
+  font-size: 0.95rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -580,6 +695,7 @@
   padding: 12px 24px;
   border-radius: 10px;
   font-weight: 600;
+  font-size: 0.95rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -590,4 +706,204 @@
 .btn-print:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
+}
+
+/* Loading State */
+.loading-spinner {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #2563eb;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 10px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .invoice-container {
+    padding: 0 10px;
+    margin: 15px auto;
+  }
+
+  .invoice-header {
+    flex-direction: column;
+    gap: 15px;
+    padding: 15px;
+  }
+
+  .header-info {
+    width: 100%;
+    justify-content: space-around;
+  }
+
+  .customer-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .summary-section {
+    grid-template-columns: 1fr;
+  }
+
+  .action-buttons {
+    flex-wrap: wrap;
+  }
+
+  .btn-back, .btn-secondary, .btn-primary {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .dropdown-menu {
+    max-height: 180px;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .btn-back,
+  .btn-secondary,
+  .btn-primary,
+  .btn-add-row,
+  .delete-btn,
+  .payment-section,
+  .action-buttons {
+    display: none !important;
+  }
+
+  .invoice-container {
+    margin: 0;
+    padding: 0;
+  }
+
+  .invoice-header,
+  .section-card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+}
+/* ========== DROPDOWN FIXES ========== */
+
+/* Table container overflow fix */
+.table-container {
+  overflow: visible !important;  /* Change from 'auto' to 'visible' */
+  margin-bottom: 20px;
+  border-radius: 12px;
+  border: 1px solid #eef2f6;
+}
+
+/* Individual cell with dropdown */
+.invoice-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #eef2f6;
+  vertical-align: top;  /* Change from 'middle' to 'top' */
+  position: relative;
+}
+
+/* Dropdown container */
+.dropdown-container {
+  position: relative;
+  width: 100%;
+}
+
+/* Dropdown input */
+.dropdown-input {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  background: white;
+  z-index: 5;
+  position: relative;
+}
+
+.dropdown-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Dropdown menu - FIXED */
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 9999 !important;  /* Force high z-index */
+  margin-top: 4px;
+  list-style: none;
+  padding: 4px 0;
+}
+
+/* Dropdown items */
+.dropdown-item {
+  padding: 12px 15px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #f1f5f9;
+  transition: all 0.2s;
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item:hover {
+  background: #f0f9ff;
+}
+
+.dropdown-item.active {
+  background: #e6f0ff;
+  border-left: 3px solid #2563eb;
+}
+
+.dropdown-item-name {
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.dropdown-item-rate {
+  color: #2563eb;
+  font-weight: 600;
+  background: #eef2ff;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+}
+
+/* Empty dropdown */
+.dropdown-empty {
+  padding: 15px;
+  text-align: center;
+  color: #94a3b8;
+  font-style: italic;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-top: 4px;
+}
+
+/* Current row highlight */
+.current-row {
+  background: #f0f9ff !important;
+}
+
+.current-row td:first-child {
+  border-left: 3px solid #2563eb;
 }
