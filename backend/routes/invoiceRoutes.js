@@ -3,10 +3,9 @@ const router = express.Router();
 const Invoice = require("../models/Invoice");
 
 // Create invoice
-// CREATE invoice - UPDATED with payment handling
 router.post("/", async (req, res) => {
   try {
-    const {
+    let {
       invoiceNo,
       customerId,
       customerName,
@@ -17,9 +16,17 @@ router.post("/", async (req, res) => {
       gst,
       notes,
       totalAmount,
-      paymentMode,     // New field
-      paidAmount       // New field
+      paymentMode,
+      paidAmount
     } = req.body;
+
+    // FIX: ensure invoiceNo is a valid number
+    invoiceNo = Number(invoiceNo);
+
+    if (!invoiceNo || isNaN(invoiceNo)) {
+      const lastInvoice = await Invoice.findOne().sort({ invoiceNo: -1 });
+      invoiceNo = lastInvoice ? lastInvoice.invoiceNo + 1 : 1;
+    }
 
     // Calculate financials
     const subtotal = items.reduce((sum, item) => sum + (item.qty * item.rate), 0);
@@ -32,7 +39,6 @@ router.post("/", async (req, res) => {
     const pending = calculatedTotal - paid;
     const paymentStatus = pending === 0 ? 'Paid' : (paid === 0 ? 'Pending' : 'Partial');
 
-    // Create invoice
     const newInvoice = new Invoice({
       invoiceNo,
       customerId,
@@ -54,7 +60,6 @@ router.post("/", async (req, res) => {
 
     await newInvoice.save();
 
-    // ✅ UPDATE CUSTOMER OUTSTANDING if payment is not full
     if (customerId && pending > 0) {
       const Customer = require("../models/Customer");
       await Customer.findByIdAndUpdate(customerId, {
@@ -65,7 +70,6 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // ✅ UPDATE CUSTOMER STATS
     if (customerId) {
       const Customer = require("../models/Customer");
       await Customer.findByIdAndUpdate(customerId, {
@@ -115,8 +119,7 @@ router.get("/search/:keyword", async (req, res) => {
   res.json(results);
 });
 
-// ========== SETTLE OUTSTANDING PAYMENT ==========
-// POST /api/invoices/payment/:invoiceId
+// SETTLE OUTSTANDING PAYMENT
 router.post("/payment/:invoiceId", async (req, res) => {
   try {
     const { paymentAmount, paymentMode } = req.body;
@@ -129,7 +132,6 @@ router.post("/payment/:invoiceId", async (req, res) => {
     const newPaidAmount = invoice.paidAmount + paymentAmount;
     const newPendingAmount = invoice.totalAmount - newPaidAmount;
     
-    // Update invoice
     invoice.paidAmount = newPaidAmount;
     invoice.pendingAmount = newPendingAmount;
     invoice.paymentStatus = newPendingAmount === 0 ? 'Paid' : 'Partial';
@@ -137,7 +139,6 @@ router.post("/payment/:invoiceId", async (req, res) => {
     
     await invoice.save();
 
-    // Update customer outstanding
     if (invoice.customerId) {
       const Customer = require("../models/Customer");
       await Customer.findByIdAndUpdate(invoice.customerId, {
