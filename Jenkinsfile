@@ -20,12 +20,12 @@ pipeline {
         }
 
         stage('Test Backend') {
-            steps {
-                dir('backend') {
-                    bat 'npm test || echo No tests'
-                }
-            }
+    steps {
+        dir('backend') {
+            bat 'npm test || exit 0'
         }
+    }
+}
 
         stage('Build Frontend') {
             steps {
