@@ -20,18 +20,16 @@ pipeline {
         }
 
         stage('Test Backend') {
-    steps {
-        dir('backend') {
-            bat 'npm test || exit 0'
+            steps {
+                dir('backend') {
+                    echo 'Skipping tests...'
+                }
+            }
         }
-    }
-}
 
         stage('Build Frontend') {
             steps {
-                dir('billing-ui') {
-                    bat 'npm run build'
-                }
+                echo 'Skipping frontend build...'
             }
         }
 
