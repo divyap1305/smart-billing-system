@@ -76,7 +76,7 @@ function Login() {
       alert("Login Successful! Redirecting to dashboard...");
       
       // Navigate to dashboard
-      navigate("/dashboard");
+      navigate("/items");
     } catch (err) {
       let errorMessage = "Login Failed";
       
